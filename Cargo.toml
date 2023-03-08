@@ -1,0 +1,10 @@
+[package]
+name = "petgraph_algos"
+version = "0.1.0"
+authors = ["Ryo Nakabayashi <ryonakabayashi@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+petgraph = ">= 0.6"
+itertools = "*"
+fnv = ">= 1.0"
