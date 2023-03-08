@@ -40,6 +40,20 @@ pub fn total_weight<N, E: FloatWeight>(graph: &DiGraph<N, E>, edges: &[EdgeIndex
 }
 
 ///
+/// short-hand of `NodeIndex::new`
+///
+pub fn ni(index: usize) -> NodeIndex {
+    NodeIndex::new(index)
+}
+
+///
+/// short-hand of `EdgeIndex::new`
+///
+pub fn ei(index: usize) -> EdgeIndex {
+    EdgeIndex::new(index)
+}
+
+///
 /// Determine if a cycle given by edges is a negative cycle or not.
 ///
 pub fn is_negative_cycle<N, E: FloatWeight>(graph: &DiGraph<N, E>, edges: &[EdgeIndex]) -> bool {
