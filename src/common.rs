@@ -131,7 +131,13 @@ fn pick_minimum_weight_edge<N, E: FloatWeight>(
             let w2 = e2.weight().float_weight();
             w1.partial_cmp(&w2).unwrap()
         })
-        .unwrap();
+        .unwrap_or_else(|| {
+            panic!(
+                "there is no edge between node {} and {}",
+                v.index(),
+                w.index()
+            )
+        });
     let e = er.id();
     e
 }
