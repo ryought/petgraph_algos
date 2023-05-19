@@ -4,9 +4,10 @@
 use super::common::FloatWeight;
 use petgraph::graph::{DiGraph, EdgeIndex, NodeIndex};
 use petgraph::visit::{EdgeRef, VisitMap, Visitable};
+use petgraph::Direction;
 
 ///
-///
+/// Caution No parallel edges!
 ///
 pub fn find_negative_cycle<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
@@ -57,7 +58,6 @@ pub fn traceback<N, E>(
     visited.visit(node);
 
     loop {
-        println!("node={}", node.index());
         node = pred[node.index()].expect("no pred!");
 
         // loop detected
@@ -275,6 +275,51 @@ mod tests {
         let cycle = find_negative_cycle(&g, v0);
         println!("{:?}", cycle);
         assert_eq!(cycle, Some(vec![v1, v0]));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bellman_ford_test_08_parallel_edges() {
+        let mut g: DiGraph<(), f64> = DiGraph::new();
+        let v0 = g.add_node(());
+        let v1 = g.add_node(());
+        let v2 = g.add_node(());
+        g.add_edge(v0, v1, -9.0);
+        g.add_edge(v0, v1, -7.0);
+        g.add_edge(v0, v1, -5.0);
+        g.add_edge(v0, v1, -3.0);
+        g.add_edge(v0, v1, -1.0);
+        g.add_edge(v0, v1, 1.0);
+        g.add_edge(v0, v1, 3.0);
+        g.add_edge(v0, v1, 5.0);
+        g.add_edge(v0, v1, 7.0);
+        g.add_edge(v0, v1, 9.0);
+        g.add_edge(v1, v2, -9.0);
+        g.add_edge(v1, v2, -7.0);
+        g.add_edge(v1, v2, -5.0);
+        g.add_edge(v1, v2, -3.0);
+        g.add_edge(v1, v2, -1.0);
+        g.add_edge(v1, v2, 1.0);
+        g.add_edge(v1, v2, 3.0);
+        g.add_edge(v1, v2, 5.0);
+        g.add_edge(v1, v2, 7.0);
+        g.add_edge(v1, v2, 9.0);
+        g.add_edge(v2, v0, -9.0);
+        g.add_edge(v2, v0, -7.0);
+        g.add_edge(v2, v0, -5.0);
+        g.add_edge(v2, v0, -3.0);
+        g.add_edge(v2, v0, -1.0);
+        g.add_edge(v2, v0, 1.0);
+        g.add_edge(v2, v0, 3.0);
+        g.add_edge(v2, v0, 5.0);
+        g.add_edge(v2, v0, 7.0);
+        g.add_edge(v2, v0, 9.0);
+        let (dist, pred) = bellman_ford(&g, v0);
+        println!("{:?}", dist);
+        println!("{:?}", pred);
+        let cycle = find_negative_cycle(&g, v0);
+        println!("{:?}", cycle);
+        // assert_eq!(cycle, Some(vec![v1, v0]));
     }
 
     #[test]
