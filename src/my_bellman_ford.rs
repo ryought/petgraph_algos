@@ -8,7 +8,7 @@ use petgraph::visit::{EdgeRef, VisitMap, Visitable};
 ///
 ///
 ///
-fn find_negative_cycle<N, E: FloatWeight>(
+pub fn find_negative_cycle<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
     source: NodeIndex,
 ) -> Option<Vec<NodeIndex>> {
@@ -30,9 +30,10 @@ fn find_negative_cycle<N, E: FloatWeight>(
 }
 
 ///
+/// Find a cycle in shortest path from source to target
+/// by using Bellman-Ford's pred (shortest path tree) on graph `g`.
 ///
-///
-fn traceback<N, E>(
+pub fn traceback<N, E>(
     g: &DiGraph<N, E>,
     pred: &[Option<NodeIndex>],
     source: NodeIndex,
@@ -68,7 +69,7 @@ fn traceback<N, E>(
 ///
 /// Calculate distances from source to node `dist[node]` and predecessor node list `pred[node]`
 ///
-fn bellman_ford<N, E: FloatWeight>(
+pub fn bellman_ford<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
     source: NodeIndex,
 ) -> (Vec<f64>, Vec<Option<NodeIndex>>) {
