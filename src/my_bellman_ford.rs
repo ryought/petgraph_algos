@@ -12,9 +12,13 @@ pub fn find_negative_cycle<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
     source: NodeIndex,
 ) -> Option<Vec<NodeIndex>> {
-    let (dist, pred) = bellman_ford(g, source);
+    let (mut dist, mut pred) = bellman_ford(g, source);
     let ix = |i: NodeIndex| i.index();
 
+    //
+    // The Bellman-ford relaxing function above checks all shortest paths whose edge count <= |V|-1
+    // If the shortest paths can be relaxed more, there should be a negative cycle.
+    //
     for edge in g.edge_references() {
         //    w
         // u ---> v
@@ -22,7 +26,14 @@ pub fn find_negative_cycle<N, E: FloatWeight>(
         let v = edge.target();
         let w = edge.weight().float_weight();
         if dist[ix(u)] + w + E::epsilon() < dist[ix(v)] {
-            return Some(traceback(g, &pred, source, v));
+            // A new shortest path from source to v was found
+            // ending with this edge u->v
+            //
+            // Length of this path is |V|, so there should be a duplicate node (that was visited
+            // twice by this path). `traceback` will find the cyclic subpath.
+            dist[ix(v)] = dist[ix(u)] + w;
+            pred[ix(v)] = Some(u);
+            return Some(traceback(g, &pred, v));
         }
     }
 
@@ -30,13 +41,13 @@ pub fn find_negative_cycle<N, E: FloatWeight>(
 }
 
 ///
-/// Find a cycle in shortest path from source to target
+/// Find a cycle in shortest path from `source` to `target`
+///
 /// by using Bellman-Ford's pred (shortest path tree) on graph `g`.
 ///
 pub fn traceback<N, E>(
     g: &DiGraph<N, E>,
     pred: &[Option<NodeIndex>],
-    source: NodeIndex,
     target: NodeIndex,
 ) -> Vec<NodeIndex> {
     let mut path = Vec::new();
@@ -46,6 +57,7 @@ pub fn traceback<N, E>(
     visited.visit(node);
 
     loop {
+        println!("node={}", node.index());
         node = pred[node.index()].expect("no pred!");
 
         // loop detected
@@ -217,6 +229,52 @@ mod tests {
         let cycle = find_negative_cycle(&g, s);
         println!("{:?}", cycle);
         assert_eq!(cycle, Some(vec![e, d, a, b]));
+    }
+
+    #[test]
+    fn bellman_ford_test_05() {
+        let mut g: DiGraph<(), f64> = DiGraph::new();
+        let v0 = g.add_node(());
+        let v1 = g.add_node(());
+        let v2 = g.add_node(());
+        g.add_edge(v0, v1, -9.0);
+        g.add_edge(v1, v2, -9.0);
+        g.add_edge(v2, v0, -9.0);
+        let (dist, pred) = bellman_ford(&g, v0);
+        println!("{:?}", dist);
+        println!("{:?}", pred);
+        // assert_eq!(dist, vec![0.0, 5.0, 15.0]);
+        let cycle = find_negative_cycle(&g, v0);
+        println!("{:?}", cycle);
+        assert_eq!(cycle, Some(vec![v1, v2, v0]));
+    }
+
+    #[test]
+    fn bellman_ford_test_06() {
+        let mut g: DiGraph<(), f64> = DiGraph::new();
+        let v = g.add_node(());
+        g.add_edge(v, v, -9.0);
+        let (dist, pred) = bellman_ford(&g, v);
+        println!("{:?}", dist);
+        println!("{:?}", pred);
+        let cycle = find_negative_cycle(&g, v);
+        println!("{:?}", cycle);
+        assert_eq!(cycle, Some(vec![v]));
+    }
+
+    #[test]
+    fn bellman_ford_test_07() {
+        let mut g: DiGraph<(), f64> = DiGraph::new();
+        let v0 = g.add_node(());
+        let v1 = g.add_node(());
+        g.add_edge(v0, v1, -9.0);
+        g.add_edge(v1, v0, 8.0);
+        let (dist, pred) = bellman_ford(&g, v0);
+        println!("{:?}", dist);
+        println!("{:?}", pred);
+        let cycle = find_negative_cycle(&g, v0);
+        println!("{:?}", cycle);
+        assert_eq!(cycle, Some(vec![v1, v0]));
     }
 
     #[test]
