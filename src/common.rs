@@ -3,6 +3,7 @@
 //!
 
 use fnv::FnvHashSet as HashSet;
+use itertools::Itertools;
 use petgraph::prelude::*;
 
 ///
@@ -220,4 +221,29 @@ pub fn edge_cycle_to_node_cycle<N, E>(
             v
         })
         .collect()
+}
+
+///
+///
+///
+pub fn remove_all_parallel_edges<N, E: FloatWeight>(graph: &mut DiGraph<N, E>) {
+    let mut edges_remove = vec![];
+    for v in graph.node_indices() {
+        for w in graph.neighbors_directed(v, Direction::Outgoing).unique() {
+            let mut edges: Vec<_> = graph
+                .edges_connecting(v, w)
+                .map(|e| (e.weight().float_weight(), e.id()))
+                .collect();
+            edges.sort_by(|(wa, _), (wb, _)| wa.partial_cmp(wb).unwrap());
+            // retain only minimum one
+            for i in 1..edges.len() {
+                edges_remove.push(edges[i].1);
+            }
+        }
+    }
+    edges_remove.sort();
+    edges_remove.reverse();
+    for e in edges_remove {
+        graph.remove_edge(e);
+    }
 }

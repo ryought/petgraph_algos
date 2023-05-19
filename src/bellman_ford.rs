@@ -157,19 +157,45 @@ where
     // Step 2: Check for negative weight cycle
     'outer: for i in g.node_identifiers() {
         for edge in g.edges(i) {
+            println!(
+                "checking edge {}->{} weight={}",
+                g.to_index(edge.source()),
+                g.to_index(edge.target()),
+                edge.weight().float_weight(),
+            );
             let j = edge.target();
             let w = edge.weight().float_weight();
             if distance[ix(i)] + w + G::EdgeWeight::epsilon() < distance[ix(j)] {
+                println!(
+                    "negative cycle found i={} j={} w={} d[i]={} d[j]={} L={} R={}\n{:?}",
+                    ix(i),
+                    ix(j),
+                    w,
+                    distance[ix(i)],
+                    distance[ix(j)],
+                    distance[ix(i)] + w + G::EdgeWeight::epsilon(),
+                    distance[ix(j)],
+                    distance,
+                );
                 // Step 3: negative cycle found
                 let start = j;
                 let mut node = start;
                 let mut visited = g.visit_map();
                 // Go backward in the predecessor chain
                 loop {
+                    println!("node={}", ix(node));
                     let ancestor = match predecessor[ix(node)] {
-                        Some(predecessor_node) => predecessor_node,
-                        None => node, // no predecessor, self cycle
+                        Some(predecessor_node) => {
+                            println!("pred");
+                            predecessor_node
+                        }
+                        None => {
+                            println!("no pred");
+                            panic!("no pred")
+                            // node // no predecessor, self cycle
+                        }
                     };
+                    println!("ancestor={}", ix(ancestor));
                     // We have only 2 ways to find the cycle and break the loop:
                     // 1. start is reached
                     if ancestor == start {
@@ -229,6 +255,16 @@ where
                 let j = edge.target();
                 let w = edge.weight().float_weight();
                 if distance[ix(i)] + w + G::EdgeWeight::epsilon() < distance[ix(j)] {
+                    println!(
+                        "updated\ti={}\tj={}\tw={}\td[i={}]={}\td[j={}]={}",
+                        ix(i),
+                        ix(j),
+                        w,
+                        ix(i),
+                        distance[ix(i)],
+                        ix(j),
+                        distance[ix(j)]
+                    );
                     distance[ix(j)] = distance[ix(i)] + w;
                     predecessor[ix(j)] = Some(i);
                     did_update = true;
@@ -269,5 +305,46 @@ mod tests {
         ]);
         let path = find_negative_cycle(&g, NodeIndex::new(0));
         println!("{:?}", path);
+    }
+
+    #[test]
+    fn orig_negative_cycle_complex_case() {
+        let mut g: DiGraph<(), f64> = DiGraph::from_edges(&[
+            (0, 17, 1.0),
+            (17, 0, 1.0),
+            (17, 3, 1.0),
+            (3, 17, 1.0),
+            (3, 2, 1.0),
+            (2, 3, 1.0),
+            (2, 31, 113.0),
+            (31, 2, 138.0),
+            (31, 7, 5.0),
+            (7, 31, 50.0),
+            (7, 12, 0.0),
+            (12, 7, 1.0),
+            (12, 10, 1.0),
+            (10, 12, 54.0),
+            (10, 26, 1165.0),
+            (26, 10, 712.0),
+            (26, 30, 163.0),
+            (30, 26, 74.0),
+            (30, 16, 604.0),
+            (16, 30, 221.0),
+            (16, 14, 581.0),
+            (14, 16, -171.0),
+            (14, 25, -35.0),
+            (25, 14, -139.0),
+            (25, 32, 0.0),
+            (32, 25, -0.0),
+        ]);
+        println!("{:?}", petgraph::dot::Dot::with_config(&g, &[]));
+        let (dist, pred) = bellman_ford_initialize_relax(&g, NodeIndex::new(0));
+        println!("{:?}", dist);
+        println!("{:?}", pred);
+        for i in 0..g.node_count() {
+            println!("i={} d[i]={} p[i]={:?}", i, dist[i], pred[i]);
+        }
+        let c = find_negative_cycle(&g, NodeIndex::new(0));
+        // println!("{:?}", c);
     }
 }

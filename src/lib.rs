@@ -18,3 +18,4 @@ pub mod cycle_enumeration;
 pub mod floyd;
 pub mod iterators;
 pub mod min_mean_weight_cycle;
+pub mod my_bellman_ford;
