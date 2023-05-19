@@ -7,6 +7,15 @@ use petgraph::visit::{EdgeRef, VisitMap, Visitable};
 use petgraph::Direction;
 
 ///
+/// Find negative cycle using Bellman Ford algorithm
+///
+/// # Algorithm
+///
+/// Using Bellman-Ford algorithm, we can calculate `dist[|V|-1][v]` that is the distance of shortest path
+/// from `source` to node `v` using upto `|V|-1` edges = `|V|` nodes.
+///
+/// If `dist[|V|][v]` is better than `dist[|V|-1][v]` for a node `v`, that means that the `dist[|V|][v]` corresponds to
+/// a shortest path from `source` to `v` that contains a negative weight cycle.
 ///
 pub fn find_negative_cycle<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
@@ -50,8 +59,6 @@ pub fn traceback<N, E>(
     pred: &[Option<NodeIndex>],
     target: NodeIndex,
 ) -> Vec<NodeIndex> {
-    println!("pred={:?}", pred);
-    println!("target={}", target.index());
     let mut path = Vec::new();
     let mut node = target;
     let mut visited = g.visit_map();
@@ -80,7 +87,33 @@ pub fn traceback<N, E>(
 }
 
 ///
-/// Calculate distances from source to node `dist[node]` and predecessor node list `pred[node]`
+/// Calculate shortest paths from source to all nodes
+///
+/// # Returns
+/// distance list `dist[node]` and predecessor node list `pred[node]`
+///
+/// # Algorithm
+///
+/// ## Definition
+///
+/// Let `dist[i][v]` be the distance of shortest path `p` (from `source` to node `v`) which consists of upto `i` edges.
+///
+/// ## Init
+///
+/// By definition, only source node is reachable with empty paths (`i=0`), so
+///
+/// ```text
+/// dist[0][v] = 0    (if v == source)
+///              +inf (otherwise)
+/// ```
+///
+/// ## Update
+///
+/// shortest path (`L=i+1`) is either shortest path (`L=i`) or extending other shortest path (`L=i`) with an edge via `u`
+///
+/// ```text
+/// dist[i+1][v] = min ( dist[i][v] , min_u { dist[i][u] + w(u, v) } )
+/// ```
 ///
 pub fn bellman_ford<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
@@ -93,9 +126,7 @@ pub fn bellman_ford<N, E: FloatWeight>(
     dist0[ix(source)] = 0.0;
 
     // relax
-    for i in 1..g.node_count() {
-        println!("i={}", i);
-        println!("dist0={:?}", dist0);
+    for _i in 1..g.node_count() {
         let mut dist1 = dist0.clone();
 
         for v in g.node_indices() {
@@ -117,9 +148,7 @@ pub fn bellman_ford<N, E: FloatWeight>(
                 }
             }
         }
-        // dist1[source] = (weight of shortest path from source to node that consists of i edges)
-        //
-        println!("dist1={:?}", dist1);
+        // dist1[source] = (weight of shortest path from source to node that consists of <=i edges)
         dist0 = dist1;
     }
 
