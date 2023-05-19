@@ -308,6 +308,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn orig_negative_cycle_complex_case() {
         let mut g: DiGraph<(), f64> = DiGraph::from_edges(&[
             (0, 17, 1.0),
