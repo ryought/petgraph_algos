@@ -7,7 +7,6 @@ use petgraph::visit::{EdgeRef, VisitMap, Visitable};
 use petgraph::Direction;
 
 ///
-/// Caution No parallel edges!
 ///
 pub fn find_negative_cycle<N, E: FloatWeight>(
     g: &DiGraph<N, E>,
@@ -51,6 +50,8 @@ pub fn traceback<N, E>(
     pred: &[Option<NodeIndex>],
     target: NodeIndex,
 ) -> Vec<NodeIndex> {
+    println!("pred={:?}", pred);
+    println!("target={}", target.index());
     let mut path = Vec::new();
     let mut node = target;
     let mut visited = g.visit_map();
@@ -86,29 +87,43 @@ pub fn bellman_ford<N, E: FloatWeight>(
     source: NodeIndex,
 ) -> (Vec<f64>, Vec<Option<NodeIndex>>) {
     // init
-    let mut dist = vec![f64::INFINITY; g.node_count()];
+    let mut dist0 = vec![f64::INFINITY; g.node_count()];
     let mut pred = vec![None; g.node_count()];
     let ix = |i: NodeIndex| i.index();
-    dist[ix(source)] = 0.0;
+    dist0[ix(source)] = 0.0;
 
     // relax
     for i in 1..g.node_count() {
-        let mut dist_new = dist.clone();
-        for edge in g.edge_references() {
-            //    w
-            // u ---> v
-            let u = edge.source();
-            let v = edge.target();
-            let w = edge.weight().float_weight();
-            if dist[ix(u)] + w + E::epsilon() < dist[ix(v)] {
-                dist_new[ix(v)] = dist[ix(u)] + w;
-                pred[ix(v)] = Some(u);
+        println!("i={}", i);
+        println!("dist0={:?}", dist0);
+        let mut dist1 = dist0.clone();
+
+        for v in g.node_indices() {
+            // update dist[v] and pred[v]
+            if let Some((d, u)) = g
+                .edges_directed(v, Direction::Incoming)
+                .map(|edge| {
+                    //    w
+                    // u ---> v
+                    let u = edge.source();
+                    let w = edge.weight().float_weight();
+                    (dist0[ix(u)] + w, u)
+                })
+                .min_by(|(da, _), (db, _)| da.partial_cmp(db).unwrap())
+            {
+                if d + E::epsilon() < dist0[ix(v)] {
+                    dist1[ix(v)] = d;
+                    pred[ix(v)] = Some(u);
+                }
             }
         }
-        dist = dist_new;
+        // dist1[source] = (weight of shortest path from source to node that consists of i edges)
+        //
+        println!("dist1={:?}", dist1);
+        dist0 = dist1;
     }
 
-    (dist, pred)
+    (dist0, pred)
 }
 
 //
@@ -278,7 +293,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn bellman_ford_test_08_parallel_edges() {
         let mut g: DiGraph<(), f64> = DiGraph::new();
         let v0 = g.add_node(());
@@ -319,7 +333,45 @@ mod tests {
         println!("{:?}", pred);
         let cycle = find_negative_cycle(&g, v0);
         println!("{:?}", cycle);
-        // assert_eq!(cycle, Some(vec![v1, v0]));
+        assert_eq!(cycle, Some(vec![v1, v2, v0]));
+    }
+
+    #[test]
+    fn bellman_ford_test_09() {
+        let mut g: DiGraph<(), f64> = DiGraph::new();
+        let v0 = g.add_node(());
+        let v1 = g.add_node(());
+        let v2 = g.add_node(());
+        let v3 = g.add_node(());
+        g.add_edge(v2, v3, -11.0);
+        g.add_edge(v3, v2, 25.0);
+        g.add_edge(v0, v2, -12.0);
+        g.add_edge(v2, v0, 40.0);
+        g.add_edge(v3, v1, -14.0);
+        g.add_edge(v1, v3, 34.0);
+        g.add_edge(v1, v0, -6.0);
+        g.add_edge(v0, v1, 24.0);
+        let (dist, pred) = bellman_ford(&g, v0);
+        println!("dist={:?}", dist);
+        println!("pred={:?}", pred);
+        let cycle = find_negative_cycle(&g, v0);
+        println!("{:?}", cycle);
+        assert_eq!(cycle, Some(vec![v2, v3, v1, v0]));
+
+        // digraph {
+        //     0 [ label = "()" ]
+        //     1 [ label = "()" ]
+        //     2 [ label = "()" ]
+        //     3 [ label = "()" ]
+        //     2 -> 3 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(0), direction: Up }" ]
+        //     3 -> 2 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(0), direction: Down }" ]
+        //     0 -> 2 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(4), direction: Up }" ]
+        //     2 -> 0 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(4), direction: Down }" ]
+        //     3 -> 1 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(5), direction: Up }" ]
+        //     1 -> 3 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(5), direction: Down }" ]
+        //     1 -> 0 [ label = "ResidueEdge { count: 1, weight: target: EdgeIndex(3), direction: Up }" ]
+        //     0 -> 1 [ label = "ResidueEdge { count: 1, weight:  target: EdgeIndex(3), direction: Down }" ]
+        // }
     }
 
     #[test]
